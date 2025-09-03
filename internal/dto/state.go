@@ -1,3 +1,4 @@
+// Package dto contains data transfer objects and its mapper
 package dto
 
 type StatesResponse struct {
