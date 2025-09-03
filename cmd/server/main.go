@@ -10,6 +10,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/confluentinc/confluent-kafka-go/v2/kafka"
+	"github.com/dandyZicky/opensky-collector/internal/broker"
 	"github.com/dandyZicky/opensky-collector/internal/clients"
 	"github.com/dandyZicky/opensky-collector/internal/collector"
 )
@@ -35,6 +37,7 @@ const (
 	baseURL        = "https://opensky-network.org/api"
 	authURL        = "https://auth.opensky-network.org/auth/realms/opensky-network/protocol/openid-connect/token"
 	tickerInterval = 10 * time.Second
+	kafkaTopic     = "flight-states"
 )
 
 func main() {
@@ -54,13 +57,27 @@ func main() {
 		Mu:          &sync.Mutex{},
 	}
 
-	flightDataCollector := &collector.DefaultCollector{
-		Client: flightClient,
-	}
-
 	err = flightClient.Authenticate()
 	if err != nil {
 		log.Panic(err)
+	}
+
+	kafkaConf := &kafka.ConfigMap{
+		"bootstrap.servers": "localhost:29092",
+		"client.id":         "openskyCollector",
+		"acks":              "all",
+	}
+
+	producerKafka := broker.KafkaProducer{
+		Producer: broker.NewKafkaProducer(kafkaConf),
+		Topic:    kafkaTopic,
+	}
+
+	defer producerKafka.Producer.Close()
+
+	flightDataCollector := &collector.DefaultCollector{
+		Client:   flightClient,
+		Producer: producerKafka,
 	}
 
 	go flightDataCollector.Poll(ctx, tickerInterval)

@@ -3,6 +3,7 @@ package collector
 
 import (
 	"context"
+	"log"
 	"time"
 
 	"github.com/dandyZicky/opensky-collector/internal/broker"
@@ -39,6 +40,7 @@ func (c *DefaultCollector) Poll(ctx context.Context, interval time.Duration) {
 				for range 3 {
 					flights, err = c.Client.GetFlights()
 					if err == nil {
+						log.Println("Retrying...")
 						break
 					}
 					time.Sleep(2 * time.Second)
@@ -51,7 +53,9 @@ func (c *DefaultCollector) Poll(ctx context.Context, interval time.Duration) {
 				MessageValue: "jaya",
 			}
 
-			c.Producer.Publish(msg)
+			if c.Producer.Publish(msg) != nil {
+				log.Println("Problems publishing message")
+			}
 		}
 	}
 }
