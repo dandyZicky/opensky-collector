@@ -2,7 +2,7 @@ package producer
 
 type DefaultMessage struct {
 	MessageKey   string
-	MessageValue string
+	MessageValue []byte
 }
 
 func (m DefaultMessage) Key() []byte {
@@ -10,5 +10,5 @@ func (m DefaultMessage) Key() []byte {
 }
 
 func (m DefaultMessage) Value() []byte {
-	return []byte(m.MessageValue)
+	return m.MessageValue
 }

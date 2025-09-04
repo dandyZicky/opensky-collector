@@ -30,7 +30,7 @@ func (c *FlightClient) Do(req *http.Request) (*http.Response, error) {
 	return resp, nil
 }
 
-func (c *FlightClient) GetFlights() (*dto.StatesResponse, error) {
+func (c *FlightClient) GetAllStateVectors() (*dto.StatesResponse, error) {
 	if !c.IsAuthenticated {
 		c.Mu.Lock()
 		defer c.Mu.Unlock()
@@ -44,6 +44,14 @@ func (c *FlightClient) GetFlights() (*dto.StatesResponse, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	q := req.URL.Query()
+	q.Set("lamin", "45.8389")
+	q.Set("lomin", "5.9962")
+	q.Set("lamax", "47.8229")
+	q.Set("lomax", "10.5226")
+
+	req.URL.RawQuery = q.Encode()
 
 	req.Header.Set("Authorization", "Bearer "+c.AccessToken)
 	resp, err := c.Do(req)
@@ -75,14 +83,14 @@ func (c *FlightClient) GetFlights() (*dto.StatesResponse, error) {
 			log.Panic(err)
 		}
 		states.States = append(states.States, state)
-		if len(states.States) >= 5 {
-			break
-		}
+		// if len(states.States) >= 5 {
+		// 	break
+		// }
 	}
 
-	for _, state := range states.States {
-		log.Printf("Flight: %+v\n", *state.Callsign)
-	}
+	// for _, state := range states.States {
+	// 	log.Printf("Flight: %+v\n", *state.Callsign)
+	// }
 
 	return &states, nil
 }

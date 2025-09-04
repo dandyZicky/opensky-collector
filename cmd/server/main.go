@@ -14,6 +14,7 @@ import (
 	"github.com/dandyZicky/opensky-collector/internal/broker"
 	"github.com/dandyZicky/opensky-collector/internal/clients"
 	"github.com/dandyZicky/opensky-collector/internal/collector"
+	"github.com/dandyZicky/opensky-collector/pkg/events"
 )
 
 func readCredentials(filePath string) (*clients.Credentials, error) {
@@ -70,7 +71,7 @@ func main() {
 
 	producerKafka := broker.KafkaProducer{
 		Producer: broker.NewKafkaProducer(kafkaConf),
-		Topic:    kafkaTopic,
+		Topic:    string(events.TelemetryRaw),
 	}
 
 	defer producerKafka.Producer.Close()
