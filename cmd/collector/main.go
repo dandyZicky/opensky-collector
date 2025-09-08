@@ -12,7 +12,7 @@ import (
 
 	"github.com/confluentinc/confluent-kafka-go/v2/kafka"
 	"github.com/dandyZicky/opensky-collector/internal/domain/collector"
-	broker "github.com/dandyZicky/opensky-collector/internal/infra/kafka"
+	producer "github.com/dandyZicky/opensky-collector/internal/infra/kafka"
 	"github.com/dandyZicky/opensky-collector/internal/infra/opensky"
 )
 
@@ -67,8 +67,8 @@ func main() {
 		"acks":              "all",
 	}
 
-	producerKafka := broker.KafkaProducer{
-		Producer: broker.NewKafkaProducer(kafkaConf),
+	producerKafka := producer.KafkaProducer{
+		Producer: producer.NewKafkaProducer(kafkaConf),
 	}
 
 	defer producerKafka.Producer.Close()
