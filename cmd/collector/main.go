@@ -11,20 +11,19 @@ import (
 	"time"
 
 	"github.com/confluentinc/confluent-kafka-go/v2/kafka"
-	"github.com/dandyZicky/opensky-collector/internal/broker"
-	"github.com/dandyZicky/opensky-collector/internal/clients"
-	"github.com/dandyZicky/opensky-collector/internal/collector"
-	"github.com/dandyZicky/opensky-collector/pkg/events"
+	"github.com/dandyZicky/opensky-collector/internal/domain/collector"
+	broker "github.com/dandyZicky/opensky-collector/internal/infra/kafka"
+	"github.com/dandyZicky/opensky-collector/internal/infra/opensky"
 )
 
-func readCredentials(filePath string) (*clients.Credentials, error) {
+func readCredentials(filePath string) (*opensky.Credentials, error) {
 	jsonFile, err := os.Open(filePath)
 	if err != nil {
 		return nil, err
 	}
 	defer jsonFile.Close()
 
-	var creds clients.Credentials
+	var creds opensky.Credentials
 	decoder := json.NewDecoder(jsonFile)
 	err = decoder.Decode(&creds)
 	if err != nil {
@@ -49,7 +48,7 @@ func main() {
 		panic(err)
 	}
 
-	flightClient := &clients.FlightClient{
+	flightClient := &opensky.FlightClient{
 		Credentials: creds,
 		URL:         baseURL,
 		AuthServer:  authURL,
@@ -70,14 +69,13 @@ func main() {
 
 	producerKafka := broker.KafkaProducer{
 		Producer: broker.NewKafkaProducer(kafkaConf),
-		Topic:    string(events.TelemetryRaw),
 	}
 
 	defer producerKafka.Producer.Close()
 
-	flightDataCollector := &collector.DefaultCollector{
+	flightDataCollector := &collector.CollectorService{
 		Client:   flightClient,
-		Producer: producerKafka,
+		Producer: &producerKafka,
 	}
 
 	go flightDataCollector.Poll(ctx, tickerInterval)
