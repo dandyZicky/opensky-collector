@@ -2,6 +2,7 @@
 package pg
 
 import (
+	"database/sql"
 	"fmt"
 
 	"gorm.io/driver/postgres"
@@ -26,9 +27,11 @@ func NewDB(config Config) (*gorm.DB, error) {
 }
 
 func insertBatch(db *gorm.DB, flightStateVectors []FlightStateVector, batchSize int) error {
-	tx := db.CreateInBatches(&flightStateVectors, batchSize)
-	if err := tx.Error; err != nil {
+	tx := db.Begin(&sql.TxOptions{})
+	err := tx.CreateInBatches(&flightStateVectors, batchSize).Error
+	if err != nil {
 		return fmt.Errorf("%s", err)
 	}
+	tx.Rollback()
 	return nil
 }

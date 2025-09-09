@@ -1,6 +1,4 @@
-//go:build integration
-// +build integration
-
+// Package pg_test contains timescaledb repository integration tests
 package pg
 
 import (
@@ -87,12 +85,10 @@ func BenchmarkInsertBatchFlightStateVector(b *testing.B) {
 	}
 
 	for b.Loop() {
-		tx := db.Begin(&sql.TxOptions{})
-		err = insertBatch(tx, msgs, batchSize)
+		err = insertBatch(db, msgs, batchSize)
 		if err != nil {
 			b.Fatal(err)
 		}
-		tx.Rollback()
 	}
 }
 
