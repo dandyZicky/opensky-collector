@@ -54,11 +54,14 @@ func (k *KafkaConsumer) Subscribe(ctx context.Context, topic events.Topic) {
 			case *kafka.Message:
 				log.Printf("Message on %s: %+v\n", e.TopicPartition, events.RawMessageToTelemetryRawEvent(e.Value))
 			case kafka.Error:
-				log.Printf("Consumer error: %v\n", e)
-				run = false
+				log.Panicf("Consumer error: %v\n", e)
 			}
 		}
 	}
 
+	log.Println("Closing consumer...")
 	k.Consumer.Close()
+}
+
+func (k *KafkaConsumer) insertEventToDB(e *events.TelemetryRawEvent) {
 }
