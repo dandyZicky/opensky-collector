@@ -1,0 +1,15 @@
+version: '3.8'
+services:
+  timescaledb-test:
+    env_file:
+      - .env.test
+    image: docker.io/timescale/timescaledb:latest-pg17
+    container_name: timescaledb-test
+    ports:
+      - 5433:5432
+    volumes:
+      - timescaledb-data:/var/lib/postgresql/data
+
+volumes:
+  timescaledb-data:
+    driver: local

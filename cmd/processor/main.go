@@ -25,7 +25,9 @@ func main() {
 		Consumer: consumer.NewKafkaConsumer(kafkaConf),
 	}
 
-	db, err := pg.NewDB()
+	dbConf := pg.NewConfigFromDotEnv(".env")
+
+	db, err := pg.NewDB(dbConf)
 	if err != nil {
 		log.Panicf("Failed to init db: %s", err.Error())
 	}
