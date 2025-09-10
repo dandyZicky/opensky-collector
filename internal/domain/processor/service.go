@@ -10,9 +10,10 @@ import (
 )
 
 type ProcessorService struct {
-	Consumer Consumer
-	Ctx      context.Context
-	Repo     FlightStateRepository
+	Consumer    Consumer
+	Ctx         context.Context
+	Repo        FlightStateRepository
+	Broadcaster Broadcaster
 }
 
 type ProcessorRepository struct {
@@ -26,7 +27,7 @@ func (p *ProcessorService) NewSubscriberService() {
 
 func (p *ProcessorService) ProcessEvents(events []events.TelemetryRawEvent, batchSize int) error {
 	var states []pg.FlightStateVector
-
+	p.Broadcaster.Broadcast(events)
 	for _, event := range events {
 		states = append(states, pg.EventToFlightStateVector(event))
 	}

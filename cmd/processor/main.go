@@ -10,6 +10,7 @@ import (
 	"github.com/dandyZicky/opensky-collector/internal/domain/processor"
 	consumer "github.com/dandyZicky/opensky-collector/internal/infra/kafka"
 	"github.com/dandyZicky/opensky-collector/internal/infra/pg"
+	"github.com/dandyZicky/opensky-collector/internal/infra/sse"
 	"github.com/dandyZicky/opensky-collector/pkg/events"
 )
 
@@ -29,12 +30,18 @@ func main() {
 		log.Panicf("Failed to init db: %s", err.Error())
 	}
 
+	broadcasterSSE := sse.NewSSEBroadcaster(ctx)
+	sseServer := sse.NewSSEServer(broadcasterSSE, "8081")
+	go broadcasterSSE.Run()
+	go sseServer.Start()
+
 	kafkaConsumer := consumer.NewKafkaConsumer(kafkaConf, events.TelemetryRaw)
 	defer kafkaConsumer.Client.Close()
 	flightDataProcessor := &processor.ProcessorService{
-		Ctx:      ctx,
-		Repo:     &processor.ProcessorRepository{DB: db},
-		Consumer: kafkaConsumer,
+		Ctx:         ctx,
+		Repo:        &processor.ProcessorRepository{DB: db},
+		Consumer:    kafkaConsumer,
+		Broadcaster: broadcasterSSE,
 	}
 
 	go flightDataProcessor.NewSubscriberService()

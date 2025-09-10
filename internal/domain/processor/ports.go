@@ -18,3 +18,7 @@ type FlightStateRepository interface {
 type Consumer interface {
 	Subscribe(ctx context.Context, eventProcessor EventProcessor)
 }
+
+type Broadcaster interface {
+	Broadcast(events []events.TelemetryRawEvent) error
+}

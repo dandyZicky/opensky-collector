@@ -29,6 +29,15 @@ func RawMessageToTelemetryRawEvent(rawMessage []byte) TelemetryRawEvent {
 	return event
 }
 
+func SerializeTelemetryRawEvent(event TelemetryRawEvent) ([]byte, error) {
+	b, err := json.Marshal(event)
+	if err != nil {
+		return nil, err
+	}
+
+	return b, nil
+}
+
 func nilFloat64(f *float64) float64 {
 	if f == nil {
 		return 0
