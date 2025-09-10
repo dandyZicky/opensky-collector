@@ -17,8 +17,3 @@ type ProcessorService struct {
 func (p *ProcessorService) NewSubscriberService() {
 	p.Consumer.Subscribe(p.Ctx, events.TelemetryRaw)
 }
-
-/*
-	Websocket vs SSE
-	Well, an interface should suffice
-*/
