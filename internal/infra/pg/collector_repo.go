@@ -9,10 +9,6 @@ import (
 	"gorm.io/gorm"
 )
 
-func InsertFlightStateVector(flightStateVector *FlightStateVector) error {
-	return nil
-}
-
 func NewDB(config Config) (*gorm.DB, error) {
 	dsn := "host=" + config.Host + " user=" + config.User + " password=" + config.Password + " dbname=" + config.Dbname + " port=" + config.Port + " sslmode=disable"
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
@@ -26,12 +22,12 @@ func NewDB(config Config) (*gorm.DB, error) {
 	return db, nil
 }
 
-func insertBatch(db *gorm.DB, flightStateVectors []FlightStateVector, batchSize int) error {
+func InsertBatch(db *gorm.DB, flightStateVectors []FlightStateVector, batchSize int) error {
 	tx := db.Begin(&sql.TxOptions{})
 	err := tx.CreateInBatches(&flightStateVectors, batchSize).Error
 	if err != nil {
 		return fmt.Errorf("%s", err)
 	}
-	tx.Rollback()
+	tx.Commit()
 	return nil
 }

@@ -63,7 +63,7 @@ func TestInsertBatchFlightStateVector(t *testing.T) {
 		msgs = append(msgs, EventToFlightStateVector(v))
 	}
 
-	err = insertBatch(db, msgs, batchSize)
+	err = InsertBatch(db, msgs, batchSize)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -85,7 +85,7 @@ func BenchmarkInsertBatchFlightStateVector(b *testing.B) {
 	}
 
 	for b.Loop() {
-		err = insertBatch(db, msgs, batchSize)
+		err = InsertBatch(db, msgs, batchSize)
 		if err != nil {
 			b.Fatal(err)
 		}

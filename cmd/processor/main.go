@@ -21,10 +21,6 @@ func main() {
 		"auto.offset.reset": "earliest",
 	}
 
-	consumerKafka := &consumer.KafkaConsumer{
-		Consumer: consumer.NewKafkaConsumer(kafkaConf),
-	}
-
 	dbConf := pg.NewConfigFromDotEnv(".env")
 
 	db, err := pg.NewDB(dbConf)
@@ -32,10 +28,14 @@ func main() {
 		log.Panicf("Failed to init db: %s", err.Error())
 	}
 
+	consumerKafka := &consumer.KafkaConsumer{
+		Consumer: consumer.NewKafkaConsumer(kafkaConf),
+		DB:       db,
+	}
+
 	flightDataProcessor := &processor.ProcessorService{
 		Consumer: consumerKafka,
 		Ctx:      ctx,
-		DB:       db,
 	}
 
 	go flightDataProcessor.NewSubscriberService()

@@ -5,17 +5,21 @@ import (
 	"log"
 
 	"github.com/confluentinc/confluent-kafka-go/v2/kafka"
+	"github.com/dandyZicky/opensky-collector/internal/infra/pg"
 	"github.com/dandyZicky/opensky-collector/pkg/events"
+	"gorm.io/gorm"
 )
 
 const (
 	ConnTimeoutMs = 5000
-	SubTimeoutMs  = 100
+	SubTimeoutMs  = 5000
+	batchSize     = 100
 )
 
 type KafkaConsumer struct {
 	Consumer *kafka.Consumer
 	Topic    string
+	DB       *gorm.DB
 }
 
 func NewKafkaConsumer(conf *kafka.ConfigMap) *kafka.Consumer {
@@ -44,6 +48,7 @@ func (k *KafkaConsumer) Subscribe(ctx context.Context, topic events.Topic) {
 	}
 
 	run := true
+	var batchInputs []pg.FlightStateVector
 	for run {
 		select {
 		case <-ctx.Done():
@@ -52,16 +57,19 @@ func (k *KafkaConsumer) Subscribe(ctx context.Context, topic events.Topic) {
 			ev := k.Consumer.Poll(SubTimeoutMs)
 			switch e := ev.(type) {
 			case *kafka.Message:
-				log.Printf("Message on %s: %+v\n", e.TopicPartition, events.RawMessageToTelemetryRawEvent(e.Value))
+				rawEvent := events.RawMessageToTelemetryRawEvent(e.Value)
+				batchInputs = append(batchInputs, pg.EventToFlightStateVector(rawEvent))
 			case kafka.Error:
 				log.Panicf("Consumer error: %v\n", e)
+			default:
+				if len(batchInputs) > 0 {
+					pg.InsertBatch(k.DB, batchInputs, batchSize)
+					batchInputs = []pg.FlightStateVector{}
+				}
 			}
 		}
 	}
 
 	log.Println("Closing consumer...")
 	k.Consumer.Close()
-}
-
-func (k *KafkaConsumer) insertEventToDB(e *events.TelemetryRawEvent) {
 }
