@@ -1,6 +1,8 @@
 package events
 
 import (
+	"encoding/json"
+
 	"github.com/dandyZicky/opensky-collector/internal/dto"
 )
 
@@ -16,6 +18,15 @@ func StateVectorToTelemetryRawEvent(state dto.State) TelemetryRawEvent {
 		GeoAltitude:   nilFloat64(state.GeoAltitude),
 		LastContact:   state.LastContact,
 	}
+}
+
+func RawMessageToTelemetryRawEvent(rawMessage []byte) TelemetryRawEvent {
+	var event TelemetryRawEvent
+	err := json.Unmarshal(rawMessage, &event)
+	if err != nil {
+		return TelemetryRawEvent{}
+	}
+	return event
 }
 
 func nilFloat64(f *float64) float64 {

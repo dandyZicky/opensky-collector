@@ -43,7 +43,7 @@ func (c *CollectorService) Poll(ctx context.Context, interval time.Duration) {
 			}
 			// TODO: Process flights data -> send to kafka topic
 			for _, state := range flights.States {
-				if c.Producer.Publish(events.StateVectorToTelemetryRawEvent(state), string(events.TelemetryRaw)) != nil {
+				if c.Producer.Publish(events.StateVectorToTelemetryRawEvent(state), events.TelemetryRaw) != nil {
 					log.Println("Problems publishing message")
 				}
 			}

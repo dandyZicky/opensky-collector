@@ -15,7 +15,7 @@ type Message interface {
 }
 
 type Producer interface {
-	Publish(event events.TelemetryRawEvent, topic string) error
+	Publish(event events.TelemetryRawEvent, topic events.Topic) error
 }
 
 type Collector interface {
