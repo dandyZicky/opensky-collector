@@ -10,6 +10,7 @@ import (
 	"github.com/dandyZicky/opensky-collector/internal/domain/processor"
 	consumer "github.com/dandyZicky/opensky-collector/internal/infra/kafka"
 	"github.com/dandyZicky/opensky-collector/internal/infra/pg"
+	"github.com/dandyZicky/opensky-collector/pkg/events"
 )
 
 func main() {
@@ -28,14 +29,12 @@ func main() {
 		log.Panicf("Failed to init db: %s", err.Error())
 	}
 
-	consumerKafka := &consumer.KafkaConsumer{
-		Consumer: consumer.NewKafkaConsumer(kafkaConf),
-		DB:       db,
-	}
-
+	kafkaConsumer := consumer.NewKafkaConsumer(kafkaConf, events.TelemetryRaw)
+	defer kafkaConsumer.Client.Close()
 	flightDataProcessor := &processor.ProcessorService{
-		Consumer: consumerKafka,
 		Ctx:      ctx,
+		Repo:     &processor.ProcessorRepository{DB: db},
+		Consumer: kafkaConsumer,
 	}
 
 	go flightDataProcessor.NewSubscriberService()

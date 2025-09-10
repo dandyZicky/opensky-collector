@@ -35,7 +35,7 @@ func NewKafkaProducer(conf *kafka.ConfigMap) *kafka.Producer {
 }
 
 func (k *KafkaProducer) Publish(event events.TelemetryRawEvent, topic events.Topic) error {
-	msg, err := EventToMessage(event, string(topic))
+	msg, err := EventToMessage(event, topic.String())
 	if err != nil {
 		return err
 

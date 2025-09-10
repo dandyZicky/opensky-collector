@@ -5,9 +5,8 @@ import (
 	"log"
 
 	"github.com/confluentinc/confluent-kafka-go/v2/kafka"
-	"github.com/dandyZicky/opensky-collector/internal/infra/pg"
+	"github.com/dandyZicky/opensky-collector/internal/domain/processor"
 	"github.com/dandyZicky/opensky-collector/pkg/events"
-	"gorm.io/gorm"
 )
 
 const (
@@ -17,59 +16,68 @@ const (
 )
 
 type KafkaConsumer struct {
-	Consumer *kafka.Consumer
-	Topic    string
-	DB       *gorm.DB
+	Client *kafka.Consumer
+	Topic  events.Topic
 }
 
-func NewKafkaConsumer(conf *kafka.ConfigMap) *kafka.Consumer {
+func NewKafkaConsumer(conf *kafka.ConfigMap, topic events.Topic) *KafkaConsumer {
 	c, err := kafka.NewConsumer(conf)
 	if err != nil {
 		log.Panicf("Failed to init kafka consumer client: %s", err.Error())
 	}
 
+	defer func() {
+		if r := recover(); r != nil {
+			c.Close()
+			panic(r)
+		}
+	}()
+
 	md, err := c.GetMetadata(nil, true, ConnTimeoutMs)
 	if err != nil {
-		log.Fatalf("Kafka brokers unreachable: %v", err)
+		log.Panicf("Kafka brokers unreachable: %v", err)
 	}
 
 	if len(md.Brokers) == 0 {
-		log.Fatalf("No brokers found in cluster metadata")
+		log.Panic("No brokers found in cluster metadata")
 	}
 
 	log.Printf("Connected to Kafka cluster with %d brokers\n", len(md.Brokers))
-	return c
+	return &KafkaConsumer{
+		Client: c,
+		Topic:  topic,
+	}
 }
 
-func (k *KafkaConsumer) Subscribe(ctx context.Context, topic events.Topic) {
-	err := k.Consumer.Subscribe(string(topic), nil)
+func (k *KafkaConsumer) Subscribe(ctx context.Context, processor processor.EventProcessor) {
+	err := k.Client.Subscribe(k.Topic.String(), nil)
 	if err != nil {
-		log.Panicf("Subscribing error to kafka topic %s: %s", string(topic), err.Error())
+		log.Panicf("Subscribing error to kafka topic %s: %s", k.Topic, err.Error())
 	}
 
 	run := true
-	var batchInputs []pg.FlightStateVector
+	var batchInputs []events.TelemetryRawEvent
 	for run {
 		select {
 		case <-ctx.Done():
 			run = false
 		default:
-			ev := k.Consumer.Poll(SubTimeoutMs)
+			ev := k.Client.Poll(SubTimeoutMs)
 			switch e := ev.(type) {
 			case *kafka.Message:
-				rawEvent := events.RawMessageToTelemetryRawEvent(e.Value)
-				batchInputs = append(batchInputs, pg.EventToFlightStateVector(rawEvent))
+				event := events.RawMessageToTelemetryRawEvent(e.Value)
+				batchInputs = append(batchInputs, event)
 			case kafka.Error:
 				log.Panicf("Consumer error: %v\n", e)
 			default:
 				if len(batchInputs) > 0 {
-					pg.InsertBatch(k.DB, batchInputs, batchSize)
-					batchInputs = []pg.FlightStateVector{}
+					processor.ProcessEvents(batchInputs, batchSize)
+					batchInputs = []events.TelemetryRawEvent{}
 				}
 			}
 		}
 	}
 
 	log.Println("Closing consumer...")
-	k.Consumer.Close()
+	k.Client.Close()
 }
