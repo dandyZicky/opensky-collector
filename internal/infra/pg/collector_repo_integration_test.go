@@ -56,7 +56,7 @@ func TestInsertBatchFlightStateVector(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	events := loadRawTelemetryData("test_data.json")
+	events := loadRawTelemetryData("testdata/test_data.json")
 
 	var msgs []FlightStateVector
 	for _, v := range events {
