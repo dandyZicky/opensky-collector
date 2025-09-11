@@ -32,13 +32,19 @@ func (c *CollectorService) Poll(ctx context.Context, interval time.Duration) {
 			// TODO: Extract processing logic to a function so we can inject it as external dependencies
 			flights, err := c.Client.GetAllStateVectors()
 			if err != nil {
+				unresolved := true
 				for range 3 {
 					flights, err = c.Client.GetAllStateVectors()
-					if err == nil {
+					if err != nil {
 						log.Println("Retrying...")
+					} else {
+						unresolved = false
 						break
 					}
-					time.Sleep(2 * time.Second)
+					time.Sleep(10 * time.Second)
+				}
+				if unresolved {
+					log.Panic("Server couldn't reach OpenSky network")
 				}
 			}
 			// TODO: Process flights data -> send to kafka topic
