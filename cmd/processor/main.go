@@ -30,6 +30,8 @@ func main() {
 		log.Panicf("Failed to init db: %s", err.Error())
 	}
 
+	inserter := pg.PgInserter{DB: db}
+
 	broadcasterSSE := sse.NewSSEBroadcaster(ctx)
 	sseServer := sse.NewSSEServer(broadcasterSSE, "8081")
 	go broadcasterSSE.Run()
@@ -39,7 +41,7 @@ func main() {
 	defer kafkaConsumer.Client.Close()
 	flightDataProcessor := &processor.ProcessorService{
 		Ctx:         ctx,
-		Repo:        &processor.ProcessorRepository{DB: db},
+		Inserter:    &inserter,
 		Consumer:    kafkaConsumer,
 		Broadcaster: broadcasterSSE,
 	}
