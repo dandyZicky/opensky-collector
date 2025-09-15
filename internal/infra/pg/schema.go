@@ -3,6 +3,7 @@ package pg
 import (
 	"time"
 
+	"github.com/dandyZicky/opensky-collector/internal/domain/flight"
 	"github.com/dandyZicky/opensky-collector/pkg/events"
 )
 
@@ -30,5 +31,20 @@ func EventToFlightStateVector(event events.TelemetryRawEvent) FlightStateVector 
 		BaroAltitude:  event.BaroAltitude,
 		GeoAltitude:   event.GeoAltitude,
 		LastContact:   time.Unix(event.LastContact, 0),
+	}
+}
+
+func ToFlightStateVector(flightState flight.FlightState) FlightStateVector {
+	return FlightStateVector{
+
+		Icao24:        flightState.Icao24,
+		OriginCountry: flightState.OriginCountry,
+		Lat:           flightState.Lat,
+		Lon:           flightState.Lon,
+		Velocity:      flightState.Velocity,
+		TimePosition:  flightState.TimePosition,
+		BaroAltitude:  flightState.BaroAltitude,
+		GeoAltitude:   flightState.GeoAltitude,
+		LastContact:   flightState.LastContact,
 	}
 }

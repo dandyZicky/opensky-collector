@@ -10,6 +10,7 @@ import (
 
 	_ "embed"
 
+	"github.com/dandyZicky/opensky-collector/internal/domain/flight"
 	"github.com/dandyZicky/opensky-collector/pkg/events"
 	"github.com/joho/godotenv"
 )
@@ -56,14 +57,16 @@ func TestInsertBatchFlightStateVector(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	p := PgInserter{DB: db}
+
 	events := loadRawTelemetryData("testdata/test_data.json")
 
-	var msgs []FlightStateVector
+	var msgs []flight.FlightState
 	for _, v := range events {
-		msgs = append(msgs, EventToFlightStateVector(v))
+		msgs = append(msgs, flight.EventToFlightState(v))
 	}
 
-	err = InsertBatch(db, msgs, batchSize)
+	err = p.InsertBatch(msgs, batchSize)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -77,15 +80,17 @@ func BenchmarkInsertBatchFlightStateVector(b *testing.B) {
 		b.Fatal(err)
 	}
 
+	p := PgInserter{DB: db}
+
 	events := loadRawTelemetryData("test_data.json")
 
-	var msgs []FlightStateVector
+	var msgs []flight.FlightState
 	for _, v := range events {
-		msgs = append(msgs, EventToFlightStateVector(v))
+		msgs = append(msgs, flight.EventToFlightState(v))
 	}
 
 	for b.Loop() {
-		err = InsertBatch(db, msgs, batchSize)
+		err = p.InsertBatch(msgs, batchSize)
 		if err != nil {
 			b.Fatal(err)
 		}
