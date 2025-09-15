@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/dandyZicky/opensky-collector/pkg/events"
+	"github.com/rs/cors"
 )
 
 type SSEBroadcaster struct {
@@ -35,8 +36,17 @@ func (s *SSEServer) Start() error {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/sse/flights", s.handleSSE)
 
+	c := cors.New(cors.Options{
+		AllowedOrigins:   []string{"http://localhost:3000"},
+		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowedHeaders:   []string{"*"},
+		AllowCredentials: true,
+	})
+
+	handler := c.Handler(mux)
+
 	log.Printf("SSE Server starting on port %s", s.port)
-	return http.ListenAndServe(":"+s.port, mux)
+	return http.ListenAndServe(":"+s.port, handler)
 }
 
 func (s *SSEServer) handleSSE(w http.ResponseWriter, r *http.Request) {
