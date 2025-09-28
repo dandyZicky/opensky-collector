@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"log"
 	"net/http"
 	"os"
@@ -16,36 +15,20 @@ import (
 	"github.com/dandyZicky/opensky-collector/internal/infra/opensky"
 )
 
-func readCredentials(filePath string) (*opensky.Credentials, error) {
-	jsonFile, err := os.Open(filePath)
-	if err != nil {
-		return nil, err
-	}
-	defer jsonFile.Close()
-
-	var creds opensky.Credentials
-	decoder := json.NewDecoder(jsonFile)
-	err = decoder.Decode(&creds)
-	if err != nil {
-		return nil, err
-	}
-
-	return &creds, nil
-}
-
 const (
 	baseURL        = "https://opensky-network.org/api"
 	authURL        = "https://auth.opensky-network.org/auth/realms/opensky-network/protocol/openid-connect/token"
-	tickerInterval = 10 * time.Second
+	tickerInterval = 21600 * time.Millisecond
 )
 
 func main() {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, os.Kill)
 	defer cancel()
 
-	creds, err := readCredentials("credentials.json")
+	creds, err := opensky.ReadCredentials("credentials.json")
 	if err != nil {
-		panic(err)
+		log.Fatalf("failed to read credentials: %v", err)
+		os.Exit(1)
 	}
 
 	flightClient := &opensky.FlightClient{
@@ -58,7 +41,8 @@ func main() {
 
 	err = flightClient.Authenticate()
 	if err != nil {
-		log.Panic(err)
+		log.Fatalf("failed to authenticate: %v", err)
+		os.Exit(1)
 	}
 
 	kafkaConf := &kafka.ConfigMap{

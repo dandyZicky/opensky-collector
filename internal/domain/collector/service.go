@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/dandyZicky/opensky-collector/pkg/events"
+	"github.com/dandyZicky/opensky-collector/pkg/retry"
 )
 
 type CollectorService struct {
@@ -14,44 +15,47 @@ type CollectorService struct {
 	Client   Client
 }
 
+func (c *CollectorService) processAndPublish() error {
+	flights, err := c.Client.GetAllStateVectors()
+	if err != nil {
+		return err
+	}
+
+	for _, state := range flights.States {
+		if c.Producer.Publish(events.StateVectorToTelemetryRawEvent(state), events.TelemetryRaw) != nil {
+			log.Println("Problems publishing message")
+		}
+	}
+	return nil
+}
+
 func (c *CollectorService) Poll(ctx context.Context, interval time.Duration) {
 	ticker := time.NewTicker(interval)
-	defer func() {
-		ticker.Stop()
-	}()
+	defer ticker.Stop()
+
+	consecutiveFailures := 0
+	const maxConsecutiveFailures = 5 // Escalate after 5 consecutive failed cycles
 
 	for {
 		select {
 		case <-ctx.Done():
+			log.Println("Collector service shutting down.")
 			return
 		case <-ticker.C:
-			if ctx.Err() != nil {
-				return
-			}
-			// Polling logic with retry mechanism
-			// TODO: Extract processing logic to a function so we can inject it as external dependencies
-			flights, err := c.Client.GetAllStateVectors()
+			err := retry.Do(
+				c.processAndPublish,
+				retry.WithAttempts(3),
+				retry.WithBackoff(10*time.Second, 2.0),
+			)
+
 			if err != nil {
-				unresolved := true
-				for range 3 {
-					flights, err = c.Client.GetAllStateVectors()
-					if err != nil {
-						log.Println("Retrying...")
-					} else {
-						unresolved = false
-						break
-					}
-					time.Sleep(10 * time.Second)
+				consecutiveFailures++
+				log.Printf("Failed cycle %d/%d: %v", consecutiveFailures, maxConsecutiveFailures, err)
+				if consecutiveFailures >= maxConsecutiveFailures {
+					log.Fatalf("Collector service failed after %d consecutive cycles. Escalating.", maxConsecutiveFailures)
 				}
-				if unresolved {
-					log.Panic("Server couldn't reach OpenSky network")
-				}
-			}
-			// TODO: Process flights data -> send to kafka topic
-			for _, state := range flights.States {
-				if c.Producer.Publish(events.StateVectorToTelemetryRawEvent(state), events.TelemetryRaw) != nil {
-					log.Println("Problems publishing message")
-				}
+			} else {
+				consecutiveFailures = 0
 			}
 		}
 	}

@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 	"sync"
 
@@ -46,10 +47,10 @@ func (c *FlightClient) GetAllStateVectors() (*dto.StatesResponse, error) {
 	}
 
 	q := req.URL.Query()
-	q.Set("lamin", "45.8389")
-	q.Set("lomin", "5.9962")
-	q.Set("lamax", "47.8229")
-	q.Set("lomax", "10.5226")
+	q.Set("lamin", "-11.00")
+	q.Set("lomin", "95.00")
+	q.Set("lamax", "6.00")
+	q.Set("lomax", "141.00")
 
 	req.URL.RawQuery = q.Encode()
 
@@ -69,9 +70,24 @@ func (c *FlightClient) GetAllStateVectors() (*dto.StatesResponse, error) {
 	// var result dto.StatesResponse
 	var result map[string]any
 
+	if resp.StatusCode == http.StatusTooManyRequests {
+		log.Println("Using alternate credentials...")
+		altCreds, err2 := ReadCredentials("credentials_alt.json")
+
+		if err2 != nil {
+			return nil, err2
+		}
+
+		c.Credentials = altCreds
+		if err2 := c.Authenticate(); err2 != nil {
+			return nil, err2
+		}
+		// let it retry on service
+	}
+
 	err = json.NewDecoder(resp.Body).Decode(&result)
 	if err != nil {
-		log.Panic(err)
+		return nil, err
 	}
 
 	states := dto.StatesResponse{}
@@ -143,4 +159,21 @@ func (c *FlightClient) Authenticate() error {
 
 	err = fmt.Errorf("access_token not found in response")
 	return err
+}
+
+func ReadCredentials(filePath string) (*Credentials, error) {
+	jsonFile, err := os.Open(filePath)
+	if err != nil {
+		return nil, err
+	}
+	defer jsonFile.Close()
+
+	var creds Credentials
+	decoder := json.NewDecoder(jsonFile)
+	err = decoder.Decode(&creds)
+	if err != nil {
+		return nil, err
+	}
+
+	return &creds, nil
 }
