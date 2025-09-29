@@ -5,6 +5,7 @@ import (
 	"time"
 )
 
+// Func is a function that can be retried.
 type Func func() error
 
 type config struct {

@@ -36,13 +36,7 @@ func main() {
 		URL:         baseURL,
 		AuthServer:  authURL,
 		HTTPClient:  &http.Client{},
-		Mu:          &sync.Mutex{},
-	}
-
-	err = flightClient.Authenticate()
-	if err != nil {
-		log.Fatalf("failed to authenticate: %v", err)
-		os.Exit(1)
+		Mutex:       &sync.Mutex{},
 	}
 
 	kafkaConf := &kafka.ConfigMap{
