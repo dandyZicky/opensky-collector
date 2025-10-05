@@ -2,11 +2,16 @@ package events
 
 type Topic string
 
-const (
-	TelemetryRaw      Topic = "telemetry.raw"
-	TelemetryEnriched Topic = "telemetry.enriched"
+var (
+	TelemetryRaw      Topic
+	TelemetryEnriched Topic
 )
 
 func (t Topic) String() string {
 	return string(t)
+}
+
+func InitTopics(raw, enriched string) {
+	TelemetryRaw = Topic(raw)
+	TelemetryEnriched = Topic(enriched)
 }

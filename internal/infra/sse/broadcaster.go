@@ -13,11 +13,12 @@ import (
 )
 
 type SSEBroadcaster struct {
-	clients    map[chan []events.TelemetryRawEvent]bool
-	register   chan chan []events.TelemetryRawEvent
-	unregister chan chan []events.TelemetryRawEvent
-	messages   chan []events.TelemetryRawEvent
-	ctx        context.Context
+	clients        map[chan []events.TelemetryRawEvent]bool
+	register       chan chan []events.TelemetryRawEvent
+	unregister     chan chan []events.TelemetryRawEvent
+	messages       chan []events.TelemetryRawEvent
+	allowedOrigins []string
+	ctx            context.Context
 }
 
 type SSEServer struct {
@@ -37,7 +38,7 @@ func (s *SSEServer) Start() error {
 	mux.HandleFunc("/sse/flights", s.handleSSE)
 
 	c := cors.New(cors.Options{
-		AllowedOrigins:   []string{"http://localhost:3000"},
+		AllowedOrigins:   s.broadcaster.allowedOrigins,
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"*"},
 		AllowCredentials: true,
@@ -54,13 +55,14 @@ func (s *SSEServer) handleSSE(w http.ResponseWriter, r *http.Request) {
 	s.broadcaster.ServeSSE(w, r, ch)
 }
 
-func NewSSEBroadcaster(ctx context.Context) *SSEBroadcaster {
+func NewSSEBroadcaster(ctx context.Context, allowedOrigins []string) *SSEBroadcaster {
 	return &SSEBroadcaster{
-		clients:    make(map[chan []events.TelemetryRawEvent]bool),
-		register:   make(chan chan []events.TelemetryRawEvent, 10),
-		unregister: make(chan chan []events.TelemetryRawEvent, 10),
-		messages:   make(chan []events.TelemetryRawEvent, 100),
-		ctx:        ctx,
+		clients:        make(map[chan []events.TelemetryRawEvent]bool),
+		register:       make(chan chan []events.TelemetryRawEvent, 10),
+		unregister:     make(chan chan []events.TelemetryRawEvent, 10),
+		messages:       make(chan []events.TelemetryRawEvent, 100),
+		ctx:            ctx,
+		allowedOrigins: allowedOrigins,
 	}
 }
 

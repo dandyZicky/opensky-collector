@@ -7,6 +7,7 @@ import (
 	"os/signal"
 
 	"github.com/confluentinc/confluent-kafka-go/v2/kafka"
+	"github.com/dandyZicky/opensky-collector/internal/config"
 	"github.com/dandyZicky/opensky-collector/internal/domain/processor"
 	consumer "github.com/dandyZicky/opensky-collector/internal/infra/kafka"
 	"github.com/dandyZicky/opensky-collector/internal/infra/pg"
@@ -15,15 +16,22 @@ import (
 )
 
 func main() {
+	config.InitConfig()
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, os.Kill)
 	defer cancel()
 	kafkaConf := &kafka.ConfigMap{
-		"bootstrap.servers": "localhost:29092",
-		"group.id":          "opensky-processor",
-		"auto.offset.reset": "earliest",
+		"bootstrap.servers": config.AppConfig.Kafka.BootstrapServers,
+		"group.id":          config.AppConfig.Kafka.Consumer.GroupID,
+		"auto.offset.reset": config.AppConfig.Kafka.Consumer.AutoOffReset,
 	}
 
-	dbConf := pg.NewConfigFromDotEnv(".env")
+	dbConf := pg.Config{
+		Host:     config.AppConfig.Database.Host,
+		Port:     config.AppConfig.Database.Port,
+		User:     config.AppConfig.Database.User,
+		Password: config.AppConfig.Database.Pass,
+		Dbname:   config.AppConfig.Database.Name,
+	}
 
 	db, err := pg.NewDB(dbConf)
 	if err != nil {
@@ -32,7 +40,7 @@ func main() {
 
 	inserter := pg.PgInserter{DB: db}
 
-	broadcasterSSE := sse.NewSSEBroadcaster(ctx)
+	broadcasterSSE := sse.NewSSEBroadcaster(ctx, config.AppConfig.SSE.AllowedOrigins)
 	sseServer := sse.NewSSEServer(broadcasterSSE, "8081")
 	go broadcasterSSE.Run()
 	go sseServer.Start()

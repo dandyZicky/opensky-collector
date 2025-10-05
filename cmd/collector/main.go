@@ -10,22 +10,18 @@ import (
 	"time"
 
 	"github.com/confluentinc/confluent-kafka-go/v2/kafka"
+	"github.com/dandyZicky/opensky-collector/internal/config"
 	"github.com/dandyZicky/opensky-collector/internal/domain/collector"
 	producer "github.com/dandyZicky/opensky-collector/internal/infra/kafka"
 	"github.com/dandyZicky/opensky-collector/internal/infra/opensky"
 )
 
-const (
-	baseURL        = "https://opensky-network.org/api"
-	authURL        = "https://auth.opensky-network.org/auth/realms/opensky-network/protocol/openid-connect/token"
-	tickerInterval = 21600 * time.Millisecond
-)
-
 func main() {
+	config.InitConfig()
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, os.Kill)
 	defer cancel()
 
-	creds, err := opensky.ReadCredentials("credentials.json")
+	creds, err := opensky.ReadCredentials(config.AppConfig.OpenSky.CredentialsFile)
 	if err != nil {
 		log.Fatalf("failed to read credentials: %v", err)
 		os.Exit(1)
@@ -33,16 +29,16 @@ func main() {
 
 	flightClient := &opensky.FlightClient{
 		Credentials: creds,
-		URL:         baseURL,
-		AuthServer:  authURL,
+		URL:         config.AppConfig.OpenSky.BaseURL,
+		AuthServer:  config.AppConfig.OpenSky.AuthURL,
 		HTTPClient:  &http.Client{},
 		Mutex:       &sync.Mutex{},
 	}
 
 	kafkaConf := &kafka.ConfigMap{
-		"bootstrap.servers": "localhost:29092",
-		"client.id":         "openskyCollector",
-		"acks":              "all",
+		"bootstrap.servers": config.AppConfig.Kafka.BootstrapServers,
+		"client.id":         config.AppConfig.Kafka.ClientID,
+		"acks":              config.AppConfig.Kafka.Acks,
 	}
 
 	producerKafka := producer.KafkaProducer{
@@ -56,7 +52,6 @@ func main() {
 		Producer: &producerKafka,
 	}
 
-	go flightDataCollector.Poll(ctx, tickerInterval)
-	// go poll(ctx, tickerInterval, flightClient)
+	go flightDataCollector.Poll(ctx, time.Duration(config.AppConfig.OpenSky.TickerInterval)*time.Millisecond)
 	<-ctx.Done()
 }
