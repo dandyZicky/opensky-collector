@@ -58,8 +58,8 @@ These instructions will get you a copy of the project up and running on your loc
 
 1.  **Clone the repository:**
     ```bash
-    git clone https://github.com/dandyZicky/opensky-flight-monitor.git
-    cd opensky-flight-monitor
+    git clone https://github.com/dandyZicky/opensky-collector.git
+    cd opensky-collector
     ```
 
 2.  **Configure Environment:**
